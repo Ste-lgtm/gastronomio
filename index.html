@@ -76,7 +76,8 @@ const CONFIG = {
     instagram: "",             // es. "https://instagram.com/gastronomio"
     facebook: "",
     whatsapp: "https://whatsapp.com/channel/0029VbCoeVi0VycBYzodxr2N",  // link del canale / WhatsApp Business
-    whatsappChat: ""           // numero WhatsApp Business per scrivere (es. "393401234567"); vuoto = usa il link sopra
+    whatsappChat: "393533430267"  // numero WhatsApp Business per gli ordini (+39 353 3430267)
+    // numero WhatsApp Business per scrivere (es. "393401234567"); vuoto = usa il link sopra
   }
 };
 </script>
@@ -1025,7 +1026,7 @@ async function init(){
   }
   // link "Scrivici su WhatsApp" nel popup: chat con il numero se c'è, altrimenti il link del canale
   const chat = String(s.whatsappChat || "").replace(/\D/g, "");
-  const chatUrl = chat ? "https://wa.me/" + chat + "?text=" + encodeURIComponent("Ciao! Vorrei ordinare più di 15 panzerotti.") : waUrl;
+  const chatUrl = chat ? "https://wa.me/" + chat : waUrl;
   if(chatUrl){
     document.querySelectorAll("[data-wa-chat]").forEach(a => a.href = chatUrl);
   } else {
