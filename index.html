@@ -75,7 +75,8 @@ const CONFIG = {
   social: {                    // lascia vuoto ciò che non serve
     instagram: "",             // es. "https://instagram.com/gastronomio"
     facebook: "",
-    whatsapp: "https://whatsapp.com/channel/0029VbCoeVi0VycBYzodxr2N"  // link del canale / WhatsApp Business
+    whatsapp: "https://whatsapp.com/channel/0029VbCoeVi0VycBYzodxr2N",  // link del canale / WhatsApp Business
+    whatsappChat: ""           // numero WhatsApp Business per scrivere (es. "393401234567"); vuoto = usa il link sopra
   }
 };
 </script>
@@ -520,6 +521,12 @@ select.od-input option{background:#211d18;color:#fff}
 .od-alert.info{background:rgba(255,169,10,.1);border-color:rgba(255,169,10,.45);color:#ffdca6}
 .od-alert[hidden]{display:none}
 .od-hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+.od-wa{display:flex;align-items:center;gap:12px;margin-top:26px;padding:13px 14px;border-radius:14px;
+  background:rgba(37,211,102,.08);border:1px solid rgba(37,211,102,.35);color:var(--text);font-size:.93rem;line-height:1.4;
+  transition:background .25s,border-color .25s,box-shadow .25s}
+.od-wa svg{width:26px;height:26px;flex:none;color:#25d366}
+.od-wa a{color:#3ee07a;font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.od-wa.hot{background:rgba(37,211,102,.16);border-color:#25d366;box-shadow:0 0 0 3px rgba(37,211,102,.15)}
 
 /* riepilogo */
 .od-thanks{text-align:center;padding-top:26px}
@@ -763,6 +770,10 @@ select.od-input option{background:#211d18;color:#fff}
         <p class="od-err">Inserisci un numero di telefono valido.</p>
       </div>
 
+      <p class="od-wa" id="odWa">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.3 14c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.5-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.8s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.3 0 .5l-.3.5-.4.4c-.1.2-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.3 2.4 1.5.3.1.5.1.6-.1l.9-1.1c.2-.3.4-.2.7-.1l1.9.9c.3.1.5.2.5.3.1.2.1.7-.1 1.2z"/></svg>
+        <span><a data-wa-chat href="#" target="_blank" rel="noopener">Scrivici su WhatsApp</a> per ordini superiori ai 15 pezzi.</span>
+      </p>
       <input class="od-hp" name="sito" id="odHp" tabindex="-1" autocomplete="off" aria-hidden="true">
     </div>
     <div class="od-alert" id="odAlert" role="alert" hidden></div>
@@ -1012,6 +1023,14 @@ async function init(){
   } else {
     const w = document.getElementById("whatsapp"); if(w) w.remove();
   }
+  // link "Scrivici su WhatsApp" nel popup: chat con il numero se c'è, altrimenti il link del canale
+  const chat = String(s.whatsappChat || "").replace(/\D/g, "");
+  const chatUrl = chat ? "https://wa.me/" + chat + "?text=" + encodeURIComponent("Ciao! Vorrei ordinare più di 15 panzerotti.") : waUrl;
+  if(chatUrl){
+    document.querySelectorAll("[data-wa-chat]").forEach(a => a.href = chatUrl);
+  } else {
+    const n = document.getElementById("odWa"); if(n) n.remove();
+  }
   $("#socials").innerHTML=links.join("");
   $("#yr").textContent=new Date().getFullYear();
 })();
@@ -1113,6 +1132,7 @@ function updateQty(){
   $("#odCount").innerHTML = n ? `<b>${n}</b> ${n === 1 ? "pezzo scelto" : "pezzi scelti"}` : "Nessun prodotto scelto";
   $("#odTotal").textContent = money(totale());
   $("#odTotPz").textContent = n === 1 ? "1 pezzo" : n + " pezzi";
+  $("#odWa").classList.toggle("hot", n >= cap);   // al limite dei 15 pezzi evidenzio l'invito a scrivere su WhatsApp
   if(n) $("[data-f=items]").classList.remove("bad");
   renderSlots();
 }
