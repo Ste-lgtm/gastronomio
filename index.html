@@ -35,6 +35,15 @@
 
   Finché SHEET_ID è vuoto la pagina mostra i dati di esempio (ottobre 2026).
 
+  ORDINI ONLINE (pulsante "Ordina ora")
+  - Lo script ordini-gastronomio.gs va incollato in Estensioni → Apps Script
+    del Google Sheet e pubblicato come App web (accesso: Chiunque).
+  - L'indirizzo dell'app (finisce con /exec) va in ORDINI_URL qui sotto.
+  - Nel popup compaiono solo i gusti con "Si" nella colonna "visibile",
+    le prossime 3 date delle Tappe e le fasce da 10 minuti dall'orario
+    della colonna "orario" fino alle 21:30, con max 15 pezzi per fascia.
+  - Gli ordini finiscono nel foglio "Ordini": una riga per ogni pezzo.
+
   Immagini: logo, foto principale, panzerotto delle tappe, immagine
   autunnale del menù e foto del camioncino sono già incluse in questo file.
 
@@ -52,6 +61,15 @@
 <script>
 const CONFIG = {
   SHEET_ID: "1zAAtRVaYN0Wt-HZVx7PkGw1nJC9VM-xNFcBsYXfXRAY",   // ID del Google Sheet Gastronomio
+  ORDINI_URL: "https://script.google.com/macros/s/AKfycby2plXTXHoC3Z57JWXoskKxKbMp2S0FxqJtLuuHDwYZlvl_5mNBWjgKQShtzy2NWT7S/exec",              // ← indirizzo della web app Apps Script (finisce con /exec)
+  ORDINI: {                    // devono coincidere con CFG nello script Apps Script
+    capienza: 15,              // pezzi massimi per fascia di 10 minuti
+    maxProdotto: 15,           // pezzi massimi dello stesso gusto
+    inizio: "18:30",           // se nella colonna "orario" delle Tappe manca l'orario
+    fine: "21:30",             // ultima fascia 21:20-21:30
+    passo: 10,                 // minuti per fascia
+    anticipo: 10               // oggi: non si prenota una fascia che inizia entro 10 minuti
+  },
   TAB_TAPPE: "Tappe",
   TAB_MENU: "Menu",
   social: {                    // lascia vuoto ciò che non serve
@@ -394,6 +412,134 @@ footer .logo{margin:0 auto 18px;width:110px}
 .socials svg{width:18px;height:18px}
 .fine{color:var(--muted);font-size:.8rem}
 
+/* ---------- PULSANTE ORDINA ---------- */
+.btn-order{
+  background:var(--orange);color:#1b1206;border:0;cursor:pointer;font-size:1.22rem;
+  padding:16px 28px;min-height:58px;border-radius:14px;
+  box-shadow:0 0 0 4px rgba(255,169,10,.2),0 14px 32px rgba(242,140,0,.42);
+}
+.btn-order svg{width:22px;height:22px;flex:none}
+.btn-order:hover{background:#ffb935}
+.btn-order:focus-visible{outline:3px solid #fff;outline-offset:3px}
+.hero-ctas .btn{flex:1 1 0;white-space:nowrap}
+.hero-ctas .btn-ghost{font-size:.95rem;padding:12px 10px}
+.hero-ctas .btn-order{flex:1 1 100%;animation:orderPulse 2.6s ease-in-out infinite}
+@keyframes orderPulse{50%{box-shadow:0 0 0 9px rgba(255,169,10,.08),0 14px 36px rgba(242,140,0,.55)}}
+@media (min-width:640px){.hero-ctas .btn{flex:0 0 auto}.hero-ctas .btn-order{flex:0 0 auto}}
+.menu-hero-txt .btn-order{margin-top:18px;width:100%}
+.menu-cta{margin-top:32px;text-align:center}
+.menu-cta .btn-order{width:100%;max-width:440px}
+.menu-cta p{color:var(--muted);font-size:.9rem;margin-top:10px}
+
+/* ---------- POPUP ORDINE ---------- */
+.od{padding:0;border:0;color:var(--text);background:var(--bg);
+  width:100%;max-width:100%;height:100%;max-height:100%;margin:0;overflow:hidden}
+.od[open]{display:flex;flex-direction:column;animation:odIn .28s ease-out}
+@keyframes odIn{from{transform:translateY(28px);opacity:0}}
+.od::backdrop{background:rgba(6,5,4,.75);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+@media (min-width:640px){
+  .od{max-width:560px;height:min(92vh,920px);margin:auto;border-radius:22px;border:1px solid var(--line);
+    box-shadow:0 30px 80px rgba(0,0,0,.6)}
+}
+.od-view{display:flex;flex-direction:column;flex:1;min-height:0}
+.od-view[hidden]{display:none}
+.od-head{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:12px 12px 12px 20px;padding-top:calc(12px + env(safe-area-inset-top));
+  border-bottom:1px solid var(--line);background:#17130f}
+.od-head h2{font-family:var(--display);font-weight:400;text-transform:uppercase;color:var(--white);font-size:2rem;line-height:1}
+.od-x{width:46px;height:46px;flex:none;border-radius:12px;border:1px solid var(--line);background:transparent;color:#fff;
+  font-size:1.7rem;line-height:1;cursor:pointer}
+.od-x:hover{border-color:var(--orange);color:var(--orange)}
+.od-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:6px 18px 30px}
+.od-foot{flex:none;display:flex;align-items:center;gap:14px;padding:12px 18px;padding-bottom:calc(12px + env(safe-area-inset-bottom));
+  border-top:1px solid var(--line);background:#17130f}
+.od-tot small{display:block;font-family:var(--cond);text-transform:uppercase;letter-spacing:.12em;font-size:.72rem;color:var(--muted)}
+.od-tot b{display:block;font-family:var(--display);font-weight:400;font-size:2rem;color:var(--orange);line-height:1;white-space:nowrap}
+.od-tot span{display:block;font-size:.75rem;color:var(--muted);margin-top:2px}
+.od-foot .btn-order{flex:1;min-height:56px;font-size:1.15rem;padding:14px 16px}
+.od-foot .btn-order:disabled{opacity:.55;cursor:wait}
+
+.od-step{padding-top:24px}
+.od-label{display:flex;align-items:center;gap:10px;font-family:var(--cond);text-transform:uppercase;letter-spacing:.07em;
+  font-weight:600;color:var(--white);font-size:1.05rem;margin-bottom:10px}
+.od-label .n{width:26px;height:26px;border-radius:50%;flex:none;display:grid;place-items:center;background:var(--orange);color:#1b1206;font-size:.85rem}
+.od-input{width:100%;font-family:var(--body);font-size:16px;color:#fff;background:var(--card);border:1.5px solid var(--line);
+  border-radius:12px;padding:13px 14px;min-height:52px}
+.od-input::placeholder{color:#7d7366}
+.od-input:focus{outline:none;border-color:var(--orange);box-shadow:0 0 0 3px rgba(255,169,10,.22)}
+select.od-input{appearance:none;-webkit-appearance:none;padding-right:44px;cursor:pointer;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffa90a' stroke-width='2.5' stroke-linecap='round'><path d='M6 9l6 6 6-6'/></svg>");
+  background-repeat:no-repeat;background-position:right 14px center;background-size:20px}
+select.od-input option{background:#211d18;color:#fff}
+.od-err{display:none;color:#ff9a8a;font-size:.86rem;margin-top:7px}
+.od-field.bad .od-err{display:block}
+.od-field.bad .od-input{border-color:#ff6b5a}
+.od-field.bad .od-label .n{background:#ff6b5a}
+.od-hint{color:var(--muted);font-size:.86rem;margin:-2px 0 10px}
+
+.od-sec{font-family:var(--cond);color:var(--orange);text-transform:uppercase;letter-spacing:.12em;font-size:.8rem;font-weight:500;margin:16px 0 8px}
+.od-sec:first-child{margin-top:2px}
+.od-item{display:flex;align-items:center;gap:12px;padding:11px 10px 11px 14px;margin-bottom:8px;
+  background:var(--card);border:1.5px solid var(--line);border-radius:14px;transition:border-color .2s,background .2s}
+.od-item.on{border-color:rgba(255,169,10,.7);background:#2b2117}
+.od-item-info{flex:1;min-width:0}
+.od-item-name{font-family:var(--cond);font-weight:600;text-transform:uppercase;color:#fff;font-size:1.06rem;line-height:1.15;letter-spacing:.02em}
+.od-item-price{font-family:var(--cond);font-weight:600;color:var(--orange);font-size:.98rem;margin-left:6px;white-space:nowrap}
+.od-item-desc{color:var(--muted);font-size:.78rem;line-height:1.35;margin-top:3px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.stepper{display:flex;align-items:center;gap:2px;flex:none}
+.stepper button{width:40px;height:40px;border-radius:50%;border:1.5px solid var(--orange);background:transparent;color:var(--orange);
+  font-size:1.4rem;font-weight:600;line-height:1;cursor:pointer;display:grid;place-items:center;padding:0;touch-action:manipulation}
+.stepper button.plus{background:var(--orange);color:#1b1206}
+.stepper button:disabled{opacity:.25;cursor:not-allowed}
+.stepper output{min-width:28px;text-align:center;font-family:var(--cond);font-weight:600;font-size:1.25rem;color:#fff;font-variant-numeric:tabular-nums}
+.od-count{display:flex;justify-content:space-between;gap:10px;font-size:.86rem;color:var(--muted);margin-top:4px}
+.od-count b{color:var(--white)}
+
+.slots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+@media (max-width:350px){.slots{grid-template-columns:repeat(2,1fr)}}
+.slot{position:relative;display:block}
+.slot input{position:absolute;opacity:0;width:1px;height:1px}
+.slot span{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:56px;padding:6px 4px;
+  border-radius:12px;border:1.5px solid var(--line);background:var(--card);cursor:pointer;text-align:center;
+  font-family:var(--cond);font-weight:600;font-size:1rem;color:#fff;line-height:1.1;font-variant-numeric:tabular-nums;transition:background .15s,border-color .15s}
+.slot small{font-family:var(--body);font-weight:500;font-size:.68rem;color:var(--muted);margin-top:3px}
+.slot:hover input:not(:disabled) + span{border-color:var(--orange)}
+.slot input:checked + span{background:var(--orange);border-color:var(--orange);color:#1b1206}
+.slot input:checked + span small{color:#4a3008}
+.slot input:focus-visible + span{outline:2px solid #fff;outline-offset:2px}
+.slot input:disabled + span{opacity:.3;cursor:not-allowed;background:transparent;border-style:dashed}
+.slot input:disabled + span b{text-decoration:line-through}
+.slot b{font-weight:600}
+.od-empty{color:var(--muted);font-size:.92rem;padding:14px;border:1.5px dashed var(--line);border-radius:12px;text-align:center}
+
+#odInfo{margin-top:16px}
+#odAlert{flex:none;margin:0 14px 10px;max-height:30vh;overflow:auto}
+.od-alert{padding:12px 14px;border-radius:12px;font-size:.92rem;line-height:1.45;
+  background:rgba(255,90,70,.12);border:1px solid rgba(255,107,90,.55);color:#ffcbc2}
+.od-alert.info{background:rgba(255,169,10,.1);border-color:rgba(255,169,10,.45);color:#ffdca6}
+.od-alert[hidden]{display:none}
+.od-hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+
+/* riepilogo */
+.od-thanks{text-align:center;padding-top:26px}
+.od-check{width:78px;height:78px;margin:0 auto 14px;border-radius:50%;display:grid;place-items:center;
+  background:var(--orange);color:#1b1206;box-shadow:0 0 0 8px rgba(255,169,10,.15),0 0 40px rgba(255,169,10,.4)}
+.od-check svg{width:40px;height:40px}
+.od-thanks h3{font-family:var(--display);font-weight:400;text-transform:uppercase;color:#fff;font-size:clamp(2.2rem,10vw,2.8rem);line-height:1}
+.od-thanks > p{color:var(--text);margin-top:8px}
+.od-sum{margin-top:22px;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.od-sum-row{display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding:11px 14px;border-bottom:1px solid var(--line);font-size:.95rem}
+.od-sum-row > span:first-child{color:var(--muted);flex:none}
+.od-sum-row > span:last-child{text-align:right;color:#fff}
+.od-sum-row a{color:var(--orange)}
+.od-sum-items{padding:6px 14px;border-bottom:1px solid var(--line)}
+.od-sum-items div{display:flex;justify-content:space-between;gap:12px;padding:6px 0;font-family:var(--cond);font-size:1.05rem;color:#fff}
+.od-sum-items div b{color:var(--orange);font-weight:600}
+.od-sum-tot{background:#2b2117;border-bottom:0;font-family:var(--cond);font-weight:600;font-size:1.25rem}
+.od-sum-tot > span:last-child{color:var(--orange)!important}
+.od-small{color:var(--muted);font-size:.84rem;margin-top:14px}
+
 /* reveal */
 .rv{opacity:0;transform:translateY(18px);transition:opacity .6s ease, transform .6s ease}
 .rv.in{opacity:1;transform:none}
@@ -432,8 +578,9 @@ footer .logo{margin:0 auto 18px;width:110px}
       <a class="next-chip" id="nextChip" href="#tappe" hidden>
         <span class="dot"></span><span>Prossima tappa:</span> <b id="nextChipTxt"></b>
       </a>
-      <div class="ctas">
-        <a class="btn btn-primary" href="#tappe">Scopri le tappe</a>
+      <div class="ctas hero-ctas">
+        <button type="button" class="btn btn-order" data-order><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h14l-1.2 11.2a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8L5 8z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/></svg>Ordina ora</button>
+        <a class="btn btn-ghost" href="#tappe">Scopri le tappe</a>
         <a class="btn btn-ghost" href="#menu">Il menù</a>
       </div>
       <a class="scroll-hint" href="#tappe" aria-label="Scorri"></a>
@@ -483,11 +630,16 @@ footer .logo{margin:0 auto 18px;width:110px}
             <p class="kicker">Il menù</p>
             <h2 class="season" id="menuTitle">Gusti di stagione</h2>
             <p class="menu-valid" id="menuValid"></p>
+            <button type="button" class="btn btn-order" data-order><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h14l-1.2 11.2a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8L5 8z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/></svg>Ordina ora</button>
           </div>
         </aside>
         <div>
           <p class="menu-intro rv">I nostri panzerotti seguono le stagioni: ogni tanto arrivano gusti speciali, solo per poco.</p>
           <div id="menuBox"></div>
+          <div class="menu-cta rv">
+            <button type="button" class="btn btn-order" data-order><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h14l-1.2 11.2a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8L5 8z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/></svg>Ordina ora</button>
+            <p>Scegli giorno, gusti e orario: lo trovi pronto al truck.</p>
+          </div>
           <div class="menu-notes rv">
             <p>Puoi modificare gli ingredienti di qualunque panzerotto in listino: le aggiunte variano da € 0,60 a € 1,20 cad.</p>
             <p>La lista degli ingredienti e degli allergeni può essere consultata presso il nostro food truck.</p>
@@ -569,6 +721,67 @@ footer .logo{margin:0 auto 18px;width:110px}
   </div>
 </footer>
 
+<!-- ============ POPUP ORDINE ============ -->
+<dialog class="od" id="orderDlg" aria-labelledby="odTitle">
+  <form class="od-view" id="odForm" novalidate>
+    <div class="od-head">
+      <h2 id="odTitle">Ordina <span class="o">ora</span></h2>
+      <button type="button" class="od-x" data-close aria-label="Chiudi">&times;</button>
+    </div>
+    <div class="od-body" id="odBody">
+      <div class="od-alert info" id="odInfo" hidden></div>
+
+      <div class="od-step od-field" data-f="nome">
+        <label class="od-label" for="odNome"><span class="n">1</span>Il tuo nome</label>
+        <input class="od-input" id="odNome" name="nome" autocomplete="name" maxlength="60" placeholder="Nome e cognome">
+        <p class="od-err">Scrivi il tuo nome.</p>
+      </div>
+
+      <div class="od-step od-field" data-f="data">
+        <label class="od-label" for="odData"><span class="n">2</span>Giorno e luogo</label>
+        <select class="od-input" id="odData"></select>
+        <p class="od-err">Scegli il giorno.</p>
+      </div>
+
+      <div class="od-step od-field" data-f="items">
+        <div class="od-label"><span class="n">3</span>Scegli i panzerotti</div>
+        <div id="odItems"></div>
+        <div class="od-count"><span id="odCount">Nessun prodotto scelto</span><span>max <span id="odCap">15</span> pezzi</span></div>
+        <p class="od-err">Aggiungi almeno un prodotto con il +.</p>
+      </div>
+
+      <div class="od-step od-field" data-f="fascia">
+        <div class="od-label"><span class="n">4</span>Orario di ritiro</div>
+        <p class="od-hint" id="odSlotHint"></p>
+        <div class="slots" id="odSlots" role="radiogroup" aria-label="Orario di ritiro"></div>
+        <p class="od-err">Scegli un orario libero.</p>
+      </div>
+
+      <div class="od-step od-field" data-f="telefono">
+        <label class="od-label" for="odTel"><span class="n">5</span>Telefono <span style="color:var(--orange)">*</span></label>
+        <input class="od-input" id="odTel" name="telefono" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" placeholder="Es. 340 123 4567">
+        <p class="od-err">Inserisci un numero di telefono valido.</p>
+      </div>
+
+      <input class="od-hp" name="sito" id="odHp" tabindex="-1" autocomplete="off" aria-hidden="true">
+    </div>
+    <div class="od-alert" id="odAlert" role="alert" hidden></div>
+    <div class="od-foot">
+      <div class="od-tot"><small>Totale</small><b id="odTotal">€ 0,00</b><span id="odTotPz">0 pezzi</span></div>
+      <button type="submit" class="btn btn-order" id="odSend">Invia ordine</button>
+    </div>
+  </form>
+
+  <div class="od-view" id="odDone" hidden>
+    <div class="od-head">
+      <h2>Ordine <span class="o">inviato</span></h2>
+      <button type="button" class="od-x" data-close aria-label="Chiudi">&times;</button>
+    </div>
+    <div class="od-body" id="odDoneBody"></div>
+    <div class="od-foot"><button type="button" class="btn btn-order" data-close>Chiudi</button></div>
+  </div>
+</dialog>
+
 <script>
 /* ===================== DATI DI ESEMPIO (usati se il foglio non è collegato) ===================== */
 const FALLBACK_TAPPE = [
@@ -597,6 +810,7 @@ const FALLBACK_MENU = [
   {sezione:"I dolci", nome:"Nocciolata", prezzo:"3,80", descrizione:"", etichetta:"100% vegetale"},
   {sezione:"I dolci", nome:"Pistacchio", prezzo:"4,20", descrizione:""}
 ];
+FALLBACK_MENU.forEach(m => { if(m.sezione !== "titolo") m.visibile = "sì"; });
 
 /* ===================== UTILITÀ ===================== */
 const GIORNI = ["domenica","lunedì","martedì","mercoledì","giovedì","venerdì","sabato"];
@@ -704,10 +918,12 @@ function renderNextChip(t){
   $("#nextChip").hidden = false;
 }
 
-function showTappe(list){ const next=prepareTappe(list); renderTabs(); renderList(); renderNextChip(next); }
+const STATE = { tappe: [], menu: [], occupati: {}, live: false };
+function showTappe(list){ STATE.tappe = list || []; const next=prepareTappe(list); renderTabs(); renderList(); renderNextChip(next); }
 
 /* ===================== MENU ===================== */
 function showMenu(items){
+  STATE.menu = items || [];
   const t = items.find(i => /^titolo$/i.test((i.sezione||"").trim()));
   $("#menuTitle").textContent = t && t.nome ? t.nome : "Gusti di stagione";
   $("#menuValid").textContent = t && t.descrizione ? t.descrizione : "";
@@ -738,8 +954,30 @@ function showMenu(items){
 }
 
 /* ===================== AVVIO ===================== */
+/* Con la web app degli ordini attiva, tappe e menù arrivano da lì:
+   così il Google Sheet può restare privato (dentro ci sono i telefoni dei clienti). */
+async function apiGet(){
+  const r = await fetch(CONFIG.ORDINI_URL + (CONFIG.ORDINI_URL.includes("?") ? "&" : "?") + "_=" + Date.now(), {cache:"no-store"});
+  if(!r.ok) throw new Error("HTTP " + r.status);
+  const d = await r.json();
+  if(!d || !d.ok) throw new Error((d && d.msg) || "Risposta non valida");
+  return d;
+}
+function applyApi(d, live){
+  STATE.occupati = d.occupati || {};
+  STATE.live = !!live;
+  showTappe(d.tappe || []);
+  showMenu(d.menu || []);
+}
+
 async function init(){
-  const KT="gm_tappe", KM="gm_menu";
+  const KT="gm_tappe", KM="gm_menu", KA="gm_api";
+  if(CONFIG.ORDINI_URL){
+    const c = cacheGet(KA);
+    if(c) applyApi(c, false);
+    try{ const d = await apiGet(); cacheSet(KA, {tappe:d.tappe, menu:d.menu}); applyApi(d, true); return; }
+    catch(e){ if(c) return; }
+  }
   if(!CONFIG.SHEET_ID){ showTappe(FALLBACK_TAPPE); showMenu(FALLBACK_MENU); return; }
 
   const cT=cacheGet(KT), cM=cacheGet(KM);
@@ -777,6 +1015,251 @@ async function init(){
   $("#socials").innerHTML=links.join("");
   $("#yr").textContent=new Date().getFullYear();
 })();
+
+/* ===================== ORDINI ===================== */
+const ORD = CONFIG.ORDINI;
+const OD = { cart: new Map(), done: false, sending: false };
+const dlg = $("#orderDlg");
+const pad2 = n => String(n).padStart(2, "0");
+const dKey = d => `${pad2(d.getDate())}/${pad2(d.getMonth()+1)}/${d.getFullYear()}`;
+const money = n => "€ " + (Math.round(n*100)/100).toFixed(2).replace(".", ",");
+const priceNum = p => { const n = parseFloat(String(p||"").replace(/[^\d,.]/g,"").replace(",", ".")); return isNaN(n) ? 0 : n; };
+const isVisible = v => /^(s[iì]|yes|x|true|1)$/i.test(String(v||"").trim());
+const toMin = s => { const m = String(s||"").match(/(\d{1,2})[:.](\d{2})/); return m ? +m[1]*60 + +m[2] : null; };
+const hhmm = t => pad2(Math.floor(t/60)) + ":" + pad2(t%60);
+const oggi = () => { const d = new Date(); d.setHours(0,0,0,0); return d; };
+const dayLabel = d => {
+  const diff = Math.round((d - oggi()) / 864e5);
+  const base = `${GIORNI[d.getDay()]} ${d.getDate()} ${MESI[d.getMonth()]}`;
+  return diff === 0 ? "Oggi, " + base : diff === 1 ? "Domani, " + base : base.charAt(0).toUpperCase() + base.slice(1);
+};
+
+const shortDay = d => {
+  const diff = Math.round((d - oggi()) / 864e5);
+  const g = GIORNI[d.getDay()].slice(0, 3), base = `${d.getDate()} ${MESI[d.getMonth()].slice(0, 3)}`;
+  return diff === 0 ? "Oggi " + base : diff === 1 ? "Domani " + base : g.charAt(0).toUpperCase() + g.slice(1) + " " + base;
+};
+
+/* fasce da 10 minuti dall'orario di inizio (colonna "orario" delle Tappe) fino a ORD.fine */
+function fasce(orario){
+  let s = toMin(orario); if(s == null) s = toMin(ORD.inizio);
+  const e = toMin(ORD.fine), out = [];
+  for(let t = s; t + ORD.passo <= e; t += ORD.passo) out.push(hhmm(t) + "-" + hhmm(t + ORD.passo));
+  return out;
+}
+function fascePrenotabili(t){
+  const all = fasce(t.orario);
+  if(+t.d !== +oggi()) return all;
+  const n = new Date(), lim = n.getHours()*60 + n.getMinutes() + ORD.anticipo;
+  return all.filter(f => toMin(f) >= lim);
+}
+/* le prossime 3 date con almeno una fascia ancora prenotabile */
+function prossimeDate(){
+  const t0 = oggi();
+  return (STATE.tappe || [])
+    .map(t => ({...t, d: parseDate(t.data)}))
+    .filter(t => t.d && t.luogo && t.d >= t0)
+    .sort((a,b) => a.d - b.d)
+    .filter(t => fascePrenotabili(t).length)
+    .slice(0, 3);
+}
+const prodottiOrdinabili = () => (STATE.menu || []).filter(i => i.nome && !/^titolo$/i.test((i.sezione||"").trim()) && isVisible(i.visibile));
+const pezzi = () => [...OD.cart.values()].reduce((a,b) => a + b, 0);
+const totale = () => prodottiOrdinabili().reduce((s,i) => s + priceNum(i.prezzo) * (OD.cart.get(i.nome) || 0), 0);
+const dataScelta = () => prossimeDate().find(t => dKey(t.d) === $("#odData").value);
+
+function renderDate(){
+  const sel = $("#odData"), prev = sel.value, list = prossimeDate();
+  sel.innerHTML = list.length
+    ? list.map(t => `<option value="${dKey(t.d)}">${esc(shortDay(t.d))} · ${esc(t.luogo)}</option>`).join("")
+    : `<option value="">Nessuna data prenotabile</option>`;
+  sel.disabled = !list.length;
+  if(list.some(t => dKey(t.d) === prev)) sel.value = prev;
+}
+
+function renderItems(){
+  const items = prodottiOrdinabili();
+  // tolgo dal carrello i prodotti non più in menù
+  [...OD.cart.keys()].forEach(k => { if(!items.some(i => i.nome === k)) OD.cart.delete(k); });
+  const secs = new Map();
+  items.forEach(i => { const s = i.sezione || "Panzerotti"; if(!secs.has(s)) secs.set(s, []); secs.get(s).push(i); });
+  $("#odItems").innerHTML = items.length ? [...secs].map(([s, list]) => `
+    <div class="od-sec">${esc(s)}</div>
+    ${list.map(i => `
+      <div class="od-item" data-nome="${esc(i.nome)}">
+        <div class="od-item-info">
+          <div class="od-item-name">${esc(i.nome)}<span class="od-item-price">${money(priceNum(i.prezzo))}</span></div>
+          ${i.descrizione ? `<div class="od-item-desc">${esc(i.descrizione)}</div>` : ""}
+        </div>
+        <div class="stepper">
+          <button type="button" class="minus" aria-label="Togli un ${esc(i.nome)}">−</button>
+          <output aria-live="polite">0</output>
+          <button type="button" class="plus" aria-label="Aggiungi un ${esc(i.nome)}">+</button>
+        </div>
+      </div>`).join("")}`).join("")
+    : `<p class="od-empty">Il menù non è disponibile in questo momento.</p>`;
+  updateQty();
+}
+
+function updateQty(){
+  const n = pezzi(), cap = ORD.capienza;
+  document.querySelectorAll("#odItems .od-item").forEach(row => {
+    const q = OD.cart.get(row.dataset.nome) || 0;
+    row.querySelector("output").textContent = q;
+    row.classList.toggle("on", q > 0);
+    row.querySelector(".minus").disabled = q <= 0;
+    row.querySelector(".plus").disabled = q >= ORD.maxProdotto || n >= cap;
+  });
+  $("#odCount").innerHTML = n ? `<b>${n}</b> ${n === 1 ? "pezzo scelto" : "pezzi scelti"}` : "Nessun prodotto scelto";
+  $("#odTotal").textContent = money(totale());
+  $("#odTotPz").textContent = n === 1 ? "1 pezzo" : n + " pezzi";
+  if(n) $("[data-f=items]").classList.remove("bad");
+  renderSlots();
+}
+
+function renderSlots(){
+  const t = dataScelta(), box = $("#odSlots");
+  if(!t){ box.innerHTML = `<p class="od-empty" style="grid-column:1/-1">Scegli prima il giorno.</p>`; $("#odSlotHint").textContent = ""; return; }
+  const prev = (box.querySelector("input:checked") || {}).value;
+  const need = Math.max(pezzi(), 1), key = dKey(t.d);
+  let lost = false;
+  box.innerHTML = fascePrenotabili(t).map(f => {
+    const occ = STATE.occupati[key + "|" + f] || 0, free = Math.max(ORD.capienza - occ, 0);
+    const off = free < need;
+    const note = free <= 0 ? "pieno" : free < ORD.capienza ? (free === 1 ? "1 libero" : `${free} liberi`) : "";
+    const chk = prev === f && !off;
+    if(prev === f && off) lost = true;
+    return `<label class="slot"><input type="radio" name="fascia" value="${f}"${off ? " disabled" : ""}${chk ? " checked" : ""}>
+      <span><b>${f.replace("-", " – ")}</b>${note ? `<small>${note}</small>` : ""}</span></label>`;
+  }).join("");
+  $("#odSlotHint").innerHTML = `Ritiro a <b style="color:#fff">${esc(t.luogo)}</b>${t.indirizzo ? " · " + esc(t.indirizzo) : ""}. Ogni fascia ha al massimo ${ORD.capienza} pezzi.`;
+  if(lost) showAlert(`Con ${need} pezzi la fascia che avevi scelto non ha più posto: scegline un'altra.`, true);
+}
+
+function showAlert(msg, info){
+  const a = $("#odAlert");
+  a.className = "od-alert" + (info ? " info" : "");
+  a.innerHTML = msg; a.hidden = false;
+}
+const hideAlert = () => { $("#odAlert").hidden = true; };
+
+function setInfo(){
+  const i = $("#odInfo");
+  if(!CONFIG.ORDINI_URL){ i.innerHTML = "Gli ordini online non sono ancora attivi: puoi guardare il menù, ma l'invio è disattivato."; i.hidden = false; }
+  else if(!prossimeDate().length){ i.innerHTML = "Al momento non ci sono date prenotabili. Le nuove tappe arrivano presto!"; i.hidden = false; }
+  else i.hidden = true;
+}
+
+async function openOrder(){
+  if(OD.done) resetOrder();
+  renderDate(); renderItems(); setInfo(); hideAlert();
+  document.documentElement.style.overflow = "hidden";
+  if(dlg.showModal) dlg.showModal(); else dlg.setAttribute("open", "");
+  $("#odBody").scrollTop = 0;
+  // aggiorno i posti occupati appena si apre
+  if(CONFIG.ORDINI_URL){
+    try{ const d = await apiGet(); applyApi(d, true); renderDate(); renderItems(); setInfo(); }
+    catch(e){ if(!STATE.live) showAlert("Non riesco a controllare gli orari liberi. Controlla la connessione: se l'orario è pieno te lo diremo all'invio.", true); }
+  }
+}
+function closeOrder(){ if(dlg.close) dlg.close(); else dlg.removeAttribute("open"); }
+dlg.addEventListener("close", () => { document.documentElement.style.overflow = ""; if(OD.done) resetOrder(); });
+
+function resetOrder(){
+  OD.cart.clear(); OD.done = false;
+  $("#odForm").reset();
+  $("#odForm").hidden = false; $("#odDone").hidden = true;
+  document.querySelectorAll("#odForm .od-field").forEach(f => f.classList.remove("bad"));
+}
+
+/* + e − */
+$("#odItems").addEventListener("click", e => {
+  const b = e.target.closest("button"); if(!b) return;
+  const nome = b.closest(".od-item").dataset.nome, q = OD.cart.get(nome) || 0;
+  if(b.classList.contains("plus") && q < ORD.maxProdotto && pezzi() < ORD.capienza) OD.cart.set(nome, q + 1);
+  if(b.classList.contains("minus") && q > 0){ q === 1 ? OD.cart.delete(nome) : OD.cart.set(nome, q - 1); }
+  hideAlert(); updateQty();
+});
+$("#odData").addEventListener("change", () => { hideAlert(); renderSlots(); $("[data-f=data]").classList.remove("bad"); });
+$("#odSlots").addEventListener("change", () => { hideAlert(); $("[data-f=fascia]").classList.remove("bad"); });
+["#odNome", "#odTel"].forEach(s => $(s).addEventListener("input", e => e.target.closest(".od-field").classList.remove("bad")));
+document.querySelectorAll("[data-order]").forEach(b => b.addEventListener("click", openOrder));
+dlg.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click", closeOrder));
+
+/* invio */
+$("#odForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  if(OD.sending) return;
+  hideAlert();
+  const nome = $("#odNome").value.trim();
+  const tel = $("#odTel").value.trim();
+  const t = dataScelta();
+  const fascia = ($("#odSlots input:checked") || {}).value;
+  const errs = {
+    nome: !nome,
+    data: !t,
+    items: !pezzi(),
+    fascia: !fascia,
+    telefono: !/^\+?[\d\s\-./()]{8,20}$/.test(tel) || tel.replace(/\D/g, "").length < 8
+  };
+  Object.entries(errs).forEach(([k, bad]) => $(`[data-f=${k}]`).classList.toggle("bad", bad));
+  const first = Object.keys(errs).find(k => errs[k]);
+  if(first){ $(`[data-f=${first}]`).scrollIntoView({behavior:"smooth", block:"center"}); return; }
+  if(!CONFIG.ORDINI_URL){ showAlert("Gli ordini online non sono ancora attivi."); return; }
+
+  const payload = {
+    nome, telefono: tel, data: dKey(t.d), fascia, hp: $("#odHp").value,
+    items: prodottiOrdinabili().filter(i => OD.cart.get(i.nome)).map(i => ({ nome: i.nome, qty: OD.cart.get(i.nome) }))
+  };
+  const btn = $("#odSend");
+  OD.sending = true; btn.disabled = true; btn.textContent = "Invio in corso…";
+  try{
+    const r = await fetch(CONFIG.ORDINI_URL, { method: "POST", body: JSON.stringify(payload) });
+    const j = await r.json();
+    if(j.ok){
+      const k = j.data + "|" + j.fascia;
+      STATE.occupati[k] = (STATE.occupati[k] || 0) + (j.pezzi || pezzi());
+      showDone(j, t);
+    } else if(j.code === "PIENO" || j.code === "PASSATA"){
+      try{ applyApi(await apiGet(), true); }catch(_){}
+      renderDate(); renderSlots();
+      $("[data-f=fascia]").classList.add("bad");
+      showAlert(esc(j.msg) + " Scegli un altro orario e invia di nuovo.");
+      $("[data-f=fascia]").scrollIntoView({behavior:"smooth", block:"center"});
+    } else {
+      showAlert(esc(j.msg || "Qualcosa non ha funzionato.") + " Riprova tra poco.");
+    }
+  }catch(err){
+    showAlert("Non riesco a inviare l'ordine: controlla la connessione e riprova.");
+  }finally{
+    OD.sending = false; btn.disabled = false; btn.textContent = "Invia ordine";
+  }
+});
+
+function showDone(j, t){
+  const d = parseDate(j.data) || t.d;
+  const q = encodeURIComponent([j.indirizzo, j.luogo].filter(Boolean).join(", "));
+  const nome1 = String(j.nome || "").split(/\s+/)[0];
+  $("#odDoneBody").innerHTML = `
+    <div class="od-thanks">
+      <div class="od-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+      <h3>Grazie${nome1 ? ", " + esc(nome1) : ""}!</h3>
+      <p>Il tuo ordine è registrato: ti aspettiamo al truck.</p>
+      <div class="od-sum">
+        <div class="od-sum-row"><span>Ordine</span><span><b>n. ${esc(j.id)}</b></span></div>
+        <div class="od-sum-row"><span>Quando</span><span>${esc(dayLabel(d))}<br><b style="color:var(--orange)">${esc(String(j.fascia).replace("-", " – "))}</b></span></div>
+        <div class="od-sum-row"><span>Dove</span><span><a href="https://www.google.com/maps/search/?api=1&query=${q}" target="_blank" rel="noopener">${esc(j.luogo)}${j.indirizzo ? "<br>" + esc(j.indirizzo) : ""}</a></span></div>
+        <div class="od-sum-items">${(j.items || []).map(i => `<div><span><b>${i.qty} ×</b> ${esc(i.nome)}</span><span>${money(i.prezzo * i.qty)}</span></div>`).join("")}</div>
+        <div class="od-sum-row"><span>Telefono</span><span>${esc(j.telefono)}</span></div>
+        <div class="od-sum-row od-sum-tot"><span>Totale</span><span>${money(j.totale)}</span></div>
+      </div>
+      <p class="od-small">Fai uno screenshot di questo riepilogo per averlo a portata di mano al ritiro.</p>
+    </div>`;
+  OD.done = true;
+  $("#odForm").hidden = true; $("#odDone").hidden = false;
+  $("#odDoneBody").scrollTop = 0;
+}
+$("#odCap").textContent = ORD.capienza;
 
 /* nav + reveal */
 const nav=$("#nav");
